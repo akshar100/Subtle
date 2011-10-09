@@ -1,6 +1,6 @@
 {
 	"_id": "_design/subtle",
-	"_rev":"18-b88c976a7107b8093b613fa668cc41b7",
+	"_rev":"19-9409306c82aa3dd7ea70d7daff8eb6ea",
 	"views":{
 		"get_bookmarks_by_user":{
 			"map":"function(doc){ emit(doc.uId ,doc._id); }"
@@ -10,6 +10,10 @@
 		},
 		"get_user":{
 			"map":"function(doc){ if(doc.type=='user'){ for(var prop in doc){  if(prop=='_id') { emit(['id',doc[prop]],doc);} emit([prop,doc[prop]],doc); }  } }"
+		},
+		"get_bookmarks_by_field":{
+			
+			"map":"function(doc){ if(doc.bAddress){ for(var prop in doc){  if(prop=='_id') { emit(['id',doc[prop]],doc);} emit([prop,doc[prop]],doc); }  } }"
 		}
 	}
 }

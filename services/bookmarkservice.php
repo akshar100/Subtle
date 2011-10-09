@@ -38,23 +38,9 @@ class BookmarkService {
   }
 
   function & getBookmark($bid, $include_tags = false) {
-      if (!is_numeric($bid))
-          return;
-
-      $sql = 'SELECT * FROM '. $GLOBALS['tableprefix'] .'bookmarks WHERE bId = '. $this->db->sql_escape($bid);
-
-      if (!($dbresult = & $this->db->sql_query($sql)))
-          message_die(GENERAL_ERROR, 'Could not get vars', '', __LINE__, __FILE__, $sql, $this->db);
-
-      if ($row = & $this->db->sql_fetchrow($dbresult)) {
-          if ($include_tags) {
-              $tagservice = & ServiceFactory :: getServiceInstance('TagService');
-              $row['tags'] = $tagservice->getTagsForBookmark($bid);
-          }
-          return $row;
-      } else {
-          return false;
-      }
+      
+	  $bookmark = $this->voltaire->doc($bid);
+	  return (array)$bookmark;  
   }
 
   function getBookmarkByAddress($address) {
