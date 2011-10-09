@@ -27,6 +27,8 @@ class UserService {
         $this->sessionkey = $GLOBALS['cookieprefix'] .'-currentuserid';
         $this->cookiekey = $GLOBALS['cookieprefix'] .'-login';
         $this->profileurl = createURL('profile', '%2$s');
+		$this->voltaire  = new Voltaire();
+		$this->voltaire->set_database("voltaire");
     }
 
     function _checkdns($host) {
@@ -50,17 +52,23 @@ class UserService {
     }
 
     function _getuser($fieldname, $value) {
-        $query = 'SELECT * FROM '. $this->getTableName() .' WHERE '. $fieldname .' = "'. $this->db->sql_escape($value) .'"';
-
-        if (! ($dbresult =& $this->db->sql_query($query)) ) {
-            message_die(GENERAL_ERROR, 'Could not get user', '', __LINE__, __FILE__, $query, $this->db);
-            return false;
-        }
-
-        if ($row =& $this->db->sql_fetchrow($dbresult))
-            return $row;
-        else
-            return false;
+    	
+		
+		
+		
+		$response = (array)$this->voltaire->doc("_design/subtle/_view/get_user?key=".json_encode(array($fieldname,$value))); 
+	 
+		if(isset($response['error']) || !count($response['rows'])>0)
+		{
+			return false; 
+		}
+		
+		$user = $response['rows'][0]->value; //Get the first row 
+		$user->id = $user->_id; 
+		
+		
+		return (array)$user; 
+		
     }
 
     function _in_regex_array($value, $array) {
@@ -79,19 +87,10 @@ class UserService {
     }
 
     function _updateuser($uId, $fieldname, $value) {
-        $updates = array ($fieldname => $value);
-        $sql = 'UPDATE '. $this->getTableName() .' SET '. $this->db->sql_build_array('UPDATE', $updates) .' WHERE '. $this->getFieldName('primary') .'='. intval($uId);
-
-        // Execute the statement.
-        $this->db->sql_transaction('begin');
-        if (!($dbresult = & $this->db->sql_query($sql))) {
-            $this->db->sql_transaction('rollback');
-            message_die(GENERAL_ERROR, 'Could not update user', '', __LINE__, __FILE__, $sql, $this->db);
-            return false;
-        }
-        $this->db->sql_transaction('commit');
-
-        // Everything worked out, so return true.
+        
+		$user = $this->voltaire->doc($uId); 
+		$user->$fieldname = $value; 
+		$this->voltaire->create_document($uId,$user);
         return true;
     }
 
@@ -104,7 +103,7 @@ class UserService {
     }
 
     function getUser($id) {
-        return $this->_getuser($this->getFieldName('primary'), $id);
+        return $this->_getuser("_id", $id);
     }
 
     function isLoggedOn() {
@@ -131,47 +130,44 @@ class UserService {
     function getCurrentUserId() {
         if (isset($_SESSION[$this->getSessionKey()])) {
             return $_SESSION[$this->getSessionKey()];
-        } else if (isset($_COOKIE[$this->getCookieKey()])) {
-            $cook = split(':', $_COOKIE[$this->getCookieKey()]);
-            //cookie looks like this: 'id:md5(username+password)'
-            $query = 'SELECT * FROM '. $this->getTableName() .
-                     ' WHERE MD5(CONCAT('.$this->getFieldName('username') .
-                                     ', '.$this->getFieldName('password') .
-                     ')) = \''.$this->db->sql_escape($cook[1]).'\' AND '.
-                     $this->getFieldName('primary'). ' = '. $this->db->sql_escape($cook[0]);
-
-            if (! ($dbresult =& $this->db->sql_query($query)) ) {
-                message_die(GENERAL_ERROR, 'Could not get user', '', __LINE__, __FILE__, $query, $this->db);
-                return false;
-            }
-
-            if ($row = $this->db->sql_fetchrow($dbresult)) {
-                $_SESSION[$this->getSessionKey()] = $row[$this->getFieldName('primary')];
-                return $_SESSION[$this->getSessionKey()];
-            }
-        }
+        } 
         return false;
     }
 
     function login($username, $password, $remember = FALSE, $path = '/') {
         $password = $this->sanitisePassword($password);
-        $query = 'SELECT '. $this->getFieldName('primary') .' FROM '. $this->getTableName() .' WHERE '. $this->getFieldName('username') .' = "'. $this->db->sql_escape($username) .'" AND '. $this->getFieldName('password') .' = "'. $this->db->sql_escape($password) .'"';
-
-        if (! ($dbresult =& $this->db->sql_query($query)) ) {
-            message_die(GENERAL_ERROR, 'Could not get user', '', __LINE__, __FILE__, $query, $this->db);
-            return false;
-        }
-
-        if ($row =& $this->db->sql_fetchrow($dbresult)) {
-            $id = $_SESSION[$this->getSessionKey()] = $row[$this->getFieldName('primary')];
-            if ($remember) {
-                $cookie = $id .':'. md5($username.$password);
-                setcookie($this->cookiekey, $cookie, time() + $this->cookietime, $path);
-            }
-            return true;
-        } else {
-            return false;
-        }
+		
+		
+		$user = $this->_getuser('username', $username); 
+		
+		if($user){
+			
+			if($user['password'] == $password)
+			{
+				$id = $_SESSION[$this->getSessionKey()] = $user['_id'];
+	            if ($remember) {
+	                $cookie = $id .':'. md5($username.$password);
+	                setcookie($this->cookiekey, $cookie, time() + $this->cookietime, $path);
+	            }
+				$user_array = (array)$user; 
+				foreach($user_array as $k=>$v)
+					$this->setFieldName($k, $v);
+				$this->setFieldName('primary', '_id');
+	            return true;
+			}
+			else
+			{
+				return false; 
+			}
+			
+		}
+		else{
+				return false; 
+		}
+		
+		
+		
+        
     }
 
     function logout($path = '/') {
@@ -278,24 +274,19 @@ class UserService {
         $datetime = gmdate('Y-m-d H:i:s', time());
         $password = $this->sanitisePassword($password);
         $values = array('username' => $username, 'password' => $password, 'email' => $email, 'uDatetime' => $datetime, 'uModified' => $datetime);
-        $sql = 'INSERT INTO '. $this->getTableName() .' '. $this->db->sql_build_array('INSERT', $values);
-
-        // Execute the statement.
-        $this->db->sql_transaction('begin');
-        if (!($dbresult = & $this->db->sql_query($sql))) {
-            $this->db->sql_transaction('rollback');
-            message_die(GENERAL_ERROR, 'Could not insert user', '', __LINE__, __FILE__, $sql, $this->db);
-            return false;
-        }
-        $this->db->sql_transaction('commit');
+       
+		$values['type']='user';
+		
+		
+		$response = $this->voltaire->create_document($values);
+				
 
         // Everything worked out, so return true.
         return true;
     }
 
     function updateUser($uId, $password, $name, $email, $homepage, $uContent) {
-        if (!is_numeric($uId))
-            return false;
+        
 
         // Set up the SQL UPDATE statement.
         $moddatetime = gmdate('Y-m-d H:i:s', time());
@@ -303,18 +294,16 @@ class UserService {
             $updates = array ('uModified' => $moddatetime, 'name' => $name, 'email' => $email, 'homepage' => $homepage, 'uContent' => $uContent);
         else
             $updates = array ('uModified' => $moddatetime, 'password' => $this->sanitisePassword($password), 'name' => $name, 'email' => $email, 'homepage' => $homepage, 'uContent' => $uContent);
-        $sql = 'UPDATE '. $this->getTableName() .' SET '. $this->db->sql_build_array('UPDATE', $updates) .' WHERE '. $this->getFieldName('primary') .'='. intval($uId);
-
-        // Execute the statement.
-        $this->db->sql_transaction('begin');
-        if (!($dbresult = & $this->db->sql_query($sql))) {
-            $this->db->sql_transaction('rollback');
-            message_die(GENERAL_ERROR, 'Could not update user', '', __LINE__, __FILE__, $sql, $this->db);
-            return false;
-        }
-        $this->db->sql_transaction('commit');
-
-        // Everything worked out, so return true.
+        
+		$user = $this->_getuser('_id', $uId);
+		
+		foreach($updates as $k=>$v)
+		{
+			$user[$k] = $v; 
+		}
+		
+		$this->voltaire->create_document($uId,$user);
+		
         return true;
     }
 

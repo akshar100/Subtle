@@ -51,7 +51,7 @@ if (count($bookmarks) > 0) {
         if ($bookmarkservice->editAllowed($row['bId'])) {
             $edit = ' - <a href="'. createURL('edit', $row['bId']) .'">'. T_('Edit') .'</a><script type="text/javascript">document.write(" - <a href=\"#\" onclick=\"deleteBookmark(this, '. $row['bId'] .'); return false;\">'. T_('Delete') .'<\/a>");</script>';
         }
-
+	
         // User attribution
         $copy = '';
         if (!isset($user) || isset($watched)) {

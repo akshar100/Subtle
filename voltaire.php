@@ -18,7 +18,7 @@ class Voltaire
 		$this->port = $port;
 		$this->username = $username; 
 		$this->password = $password; 
-		$this->database = $database; 
+		//$this->database = $database; 
 		if(empty($this->username))
 		{
 			$this->dsn = "http://{$this->host}:{$this->port}/";
@@ -78,9 +78,13 @@ class Voltaire
 		
 		$response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		
-		return json_decode($response); 
+		$response = json_decode($response);
 		
-		
+		if(!isset($response->id))
+		{
+			$response->id = $response->_id; 
+		} 
+		return $response; 
 		
 	}
 

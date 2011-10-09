@@ -72,7 +72,7 @@ if ($user) {
             $templateservice->loadTemplate('error.404.tpl', $tplVars);
             exit();
         } else {
-            $userid =& $userinfo['uId'];
+            $userid =& $userinfo['id'];
         }
     }
     $pagetitle .= ': '. $user;
@@ -134,7 +134,7 @@ if (isset($_GET['action']) && ($_GET['action'] == "add")) {
     }
     $templatename = 'editbookmark.tpl';
 }
- 
+
 if ($templatename == 'editbookmark.tpl') {
     if ($loggedon) {
         $tplVars['formaction']  = createURL('bookmarks', $currentUsername);
@@ -163,7 +163,7 @@ if ($templatename == 'editbookmark.tpl') {
         $tplVars['error'] = T_('You must be logged in before you can add bookmarks.');
     }
 } else if ($user && !isset($_GET['popup'])) {
-        
+       
     $tplVars['sidebar_blocks'] = array('profile', 'watchstatus');
 
     if (!$cat) {
@@ -215,6 +215,7 @@ if ($templatename == 'editbookmark.tpl') {
     $tplVars['pagetitle'] = $title;
     $tplVars['subtitle'] = $title;
 }
+
 $templateservice->loadTemplate($templatename, $tplVars);
 
 if ($usecache && $endcache) {
