@@ -1,0 +1,12 @@
+{
+	"_id": "_design/subtle",
+	"_rev":"9-5fba5811354aed3499e018c3c123b71d",
+	"views":{
+		"get_bookmarks_by_user":{
+			"map":"function(doc){ emit(doc.uId ,doc._id); }"
+		},
+		"get_tags_stats":{
+			"map":"function(doc){ if(doc.categories){ for(i in doc.categories){ emit(doc.categories[i],doc._id );  }} }"
+		}
+	}
+}
