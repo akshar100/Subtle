@@ -17,24 +17,24 @@ class BookmarkService {
   }
 
   function _getbookmark($fieldname, $value, $all = false) {
-      if (!$all) {
-          $userservice = & ServiceFactory :: getServiceInstance('UserService');
-          $sId = $userservice->getCurrentUserId();
-          $range = ' AND uId = '. $sId;
-      }
-
-      $query = 'SELECT * FROM '. $GLOBALS['tableprefix'] .'bookmarks WHERE '. $fieldname .' = "'. $this->db->sql_escape($value) .'"'. $range;
-
-      if (!($dbresult = & $this->db->sql_query_limit($query, 1, 0))) {
-          message_die(GENERAL_ERROR, 'Could not get bookmark', '', __LINE__, __FILE__, $query, $this->db);
-          return false;
-      }
-
-      if ($row =& $this->db->sql_fetchrow($dbresult)) {
-          return $row;
-      } else {
-          return false;
-      }
+      
+	  
+	  
+	  $response = (array)$this->voltaire->doc("_design/subtle/_view/get_bookmarks_by_field?key=".json_encode(array($fieldname,$value))); 
+	 
+		if(isset($response['error']) || !count($response['rows'])>0)
+		{
+			return false; 
+		}
+		
+		$bookmark= $response['rows'][0]->value; //Get the first row 
+		$bookmark->id = $bookmark->_id; 
+		
+		
+		return (array)$boomark; 
+	  
+	  
+	  
   }
 
   function & getBookmark($bid, $include_tags = false) {
@@ -53,8 +53,7 @@ class BookmarkService {
   }
 
   function editAllowed($bookmark) {
-      if (!is_numeric($bookmark) && (!is_array($bookmark) || !is_numeric($bookmark['bId'])))
-          return false;
+     
 
       if (!is_array($bookmark))
           if (!($bookmark = $this->getBookmark($bookmark)))
@@ -83,22 +82,13 @@ class BookmarkService {
           $crit['uId'] = $uid;
       }
 
-      $sql = 'SELECT COUNT(*) FROM '. $GLOBALS['tableprefix'] .'bookmarks WHERE '. $this->db->sql_build_array('SELECT', $crit);
-      if (!($dbresult = & $this->db->sql_query($sql))) {
-          message_die(GENERAL_ERROR, 'Could not get vars', '', __LINE__, __FILE__, $sql, $this->db);
-      }
-      return ($this->db->sql_fetchfield(0, 0) > 0);
+      return $this->voltaire->query("subtle","get_bookmarks_by_url",$crit,TRUE);
   }
 
   // Adds a bookmark to the database.
   // Note that date is expected to be a string that's interpretable by strtotime().
   function addBookmark($address, $title, $description, $status, $categories, $date = NULL, $fromApi = false, $fromImport = false) {
-      	
-		
-		
-	  
-      	
-	
+      		
       $userservice = & ServiceFactory :: getServiceInstance('UserService');
       $sId = $userservice->getCurrentUserId();
 
