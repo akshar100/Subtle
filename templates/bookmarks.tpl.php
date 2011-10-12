@@ -48,7 +48,7 @@ if (count($bookmarks) > 0) {
 
         // Edit and delete links
         $edit = '';
-        if ($bookmarkservice->editAllowed($row['bId'])) {
+        if ($bookmarkservice->editAllowed($row['_id'])) {
             $edit = ' - <a href="'. createURL('edit', $row['bId']) .'">'. T_('Edit') .'</a><script type="text/javascript">document.write(" - <a href=\"#\" onclick=\"deleteBookmark(this, '. $row['bId'] .'); return false;\">'. T_('Delete') .'<\/a>");</script>';
         }
 	

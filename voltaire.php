@@ -165,7 +165,7 @@ class Voltaire
 	
 	public function query($design,$view,$arr,$first=TRUE)
 	{
-		$response = (array)$this->voltaire->doc("_design/$design/_view/$view?key=".json_encode($arr)); 
+		$response = (array)$this->doc("_design/$design/_view/$view?".$this->generate_query_string($arr)); 
 	 
 		if(isset($response['error']) || !count($response['rows'])>0)
 		{
@@ -187,6 +187,17 @@ class Voltaire
 		}
 		
 		
+	}
+	
+	protected function generate_query_string($arr)
+	{
+		$string ="";
+		$i=0; 
+		foreach($arr as $k=>$v)
+		{
+			$string.="&$k=".json_encode($v); 
+		}
+		return $string; 
 	}
 	
 }

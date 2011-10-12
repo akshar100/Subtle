@@ -19,14 +19,14 @@ class BookmarkService {
   function _getbookmark($fieldname, $value, $all = false) {
       
 	  
-	  
+	
 	  $response = (array)$this->voltaire->doc("_design/subtle/_view/get_bookmarks_by_field?key=".json_encode(array($fieldname,$value))); 
 	 
 		if(isset($response['error']) || !count($response['rows'])>0)
 		{
 			return false; 
 		}
-		
+	
 		$bookmark= $response['rows'][0]->value; //Get the first row 
 		$bookmark->id = $bookmark->_id; 
 		
@@ -203,7 +203,7 @@ class BookmarkService {
 	  	$bookmarks[]= $arr;
 	  }
 	  $total = $res->total_rows;   
-     
+      
       return array ('bookmarks' => $bookmarks, 'total' => $total);
   }
 
