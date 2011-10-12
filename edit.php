@@ -27,7 +27,6 @@ $userservice     =& ServiceFactory::getServiceInstance('UserService');
 // Header variables
 $tplVars['subtitle'] = T_('Edit Bookmark');
 $tplVars['loadjs']   = TRUE;
-
 list ($url, $bookmark) = explode('/', $_SERVER['PATH_INFO']);
 
 if (!($row = $bookmarkservice->getBookmark(intval($bookmark), true))) {

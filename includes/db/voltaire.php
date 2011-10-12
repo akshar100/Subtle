@@ -159,6 +159,52 @@ class Voltaire
 		return $this->request("PUT",$this->database."/_design/".$doc, json_encode($contents));
 	}
 	
+	public function query($design,$view,$arr,$first=TRUE)
+	{
+		
+		$response = (array)$this->doc("_design/$design/_view/$view?".$this->generate_query_string($arr)); 
+	 
+		if(isset($response['error']) || !count($response['rows'])>0)
+		{
+			return false; 
+		}
+		
+		if($first)
+		{
+			$row = $response['rows'][0]->value; //Get the first row 
+			$row->id = $row->_id; 
+		
+		
+			return $row; 
+				
+		}
+		else
+		{
+			return $response['rows'];
+		}
+		
+		
+	}
+	
+	protected function generate_query_string($arr)
+	{
+		$string ="";
+		$i=0; 
+		foreach($arr as $k=>$v)
+		{
+			if($i==0)
+			{
+				$string.="$k=".json_encode($v); 
+			}
+			else
+			{
+				$string.="&$k=".json_encode($v); 
+			}
+			
+		}
+		return $string; 
+	}
+	
 }
 
 

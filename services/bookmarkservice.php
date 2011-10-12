@@ -20,8 +20,9 @@ class BookmarkService {
       
 	  
 	
-	  $response = (array)$this->voltaire->doc("_design/subtle/_view/get_bookmarks_by_field?key=".json_encode(array($fieldname,$value))); 
-	 
+	   $response = (array)$this->voltaire->query("subtle","get_bookmarks_by_field",array("key"=>array($fieldname,$value))); 
+	  
+	 	
 		if(isset($response['error']) || !count($response['rows'])>0)
 		{
 			return false; 
@@ -49,7 +50,10 @@ class BookmarkService {
   }
 
   function getBookmarkByHash($hash) {
-      return $this->_getbookmark('bHash', $hash, true);
+      $crit = array ('key' => $hash);
+     
+
+      return (array)$this->voltaire->query("subtle","get_bookmarks_by_url",$crit,TRUE);
   }
 
   function editAllowed($bookmark) {
@@ -77,12 +81,20 @@ class BookmarkService {
           $address = 'http://'. $address;
       }
 
-      $crit = array ('bHash' => md5($address));
-      if (isset ($uid)) {
-          $crit['uId'] = $uid;
-      }
+      $crit = array ('key' => md5($address));
+      
 
-      return $this->voltaire->query("subtle","get_bookmarks_by_url",$crit,TRUE);
+      $bookmark = $this->voltaire->query("subtle","get_bookmarks_by_url",$crit,TRUE);
+	  
+	  if(!isset($bookmark->_id)){ return false; }
+	  else
+	  	{
+	  		if(!empty($uid))
+			{
+				return $bookmark->uId == $uid; 
+			}
+			return true; 
+	  	}
   }
 
   // Adds a bookmark to the database.
@@ -147,33 +159,20 @@ class BookmarkService {
 
       // Set up the SQL update statement and execute it.
       $updates = array('bModified' => $moddatetime, 'bTitle' => $title, 'bAddress' => $address, 'bDescription' => $description, 'bStatus' => $status, 'bHash' => md5($address));
-
-      if (!is_null($date)) {
-          $updates['bDateTime'] = gmdate('Y-m-d H:i:s', strtotime($date));
-      }
-
-      $sql = 'UPDATE '. $GLOBALS['tableprefix'] .'bookmarks SET '. $this->db->sql_build_array('UPDATE', $updates) .' WHERE bId = '. intval($bId);
-      $this->db->sql_transaction('begin');
-
-      if (!($dbresult = & $this->db->sql_query($sql))) {
-          $this->db->sql_transaction('rollback');
-          message_die(GENERAL_ERROR, 'Could not update bookmark', '', __LINE__, __FILE__, $sql, $this->db);
-          return false;
-      }
-
-      $uriparts = explode('.', $address);
-      $extension = end($uriparts);
-      unset($uriparts);
-
-      $tagservice = & ServiceFactory :: getServiceInstance('TagService');
-      if (!$tagservice->attachTags($bId, $categories, $fromApi, $extension)) {
-          $this->db->sql_transaction('rollback');
-          message_die(GENERAL_ERROR, 'Could not update bookmark', '', __LINE__, __FILE__, $sql, $this->db);
-          return false;
-      }
-
-      $this->db->sql_transaction('commit');
-      // Everything worked out, so return true.
+      $values_with_tags = $updates;
+	  $values_with_tags['categories'] = explode(" ",$categories);
+	  
+	  $doc = $this->voltaire->doc($bId); 
+	  $values_with_tags["_rev"] = $doc->_rev; 
+	  $values_with_tags["_id"] = $doc->_id; 
+	  $result_doc = $this->voltaire->create_document($values_with_tags); 
+	  
+      if($result_doc->ok)
+	  {
+	  	return $result_doc->id; 
+	  }
+      return false;
+      
       return true;
   }
 
