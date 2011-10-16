@@ -4,6 +4,7 @@ $this->includeTemplate($GLOBALS['top_include']);
 $accessPublic = '';
 $accessShared = '';
 $accessPrivate = '';
+
 switch ($row['bStatus']) {
     case 0 :
         $accessPublic = ' selected="selected"';

@@ -34,7 +34,9 @@ if (!($row = $bookmarkservice->getBookmark(intval($bookmark), true))) {
     $templateservice->loadTemplate('error.404.tpl', $tplVars);
     exit();
 } else {
-    if (!$bookmarkservice->editAllowed($row)) {
+	
+    if (!$bookmarkservice->editAllowed($bookmark)) {
+    	
         $tplVars['error'] = T_('You are not allowed to edit this bookmark');
         $templateservice->loadTemplate('error.500.tpl', $tplVars);
         exit();
@@ -80,8 +82,10 @@ if (!($row = $bookmarkservice->getBookmark(intval($bookmark), true))) {
             }
         }
     }
+	$row = (array)$bookmarkservice->getBookmark(($bookmark), true);
 
     $tplVars['popup'] = (isset($_GET['popup'])) ? $_GET['popup'] : null;
+	$row['tags'] = $row['categories'];
     $tplVars['row'] =& $row;
     $tplVars['formaction']  = createURL('edit', $bookmark);
     $tplVars['btnsubmit'] = T_('Save Changes');

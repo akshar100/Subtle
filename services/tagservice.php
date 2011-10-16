@@ -14,148 +14,17 @@ class TagService {
   function TagService(&$db) {
     $this->db =& $db;
     $this->tablename = $GLOBALS['tableprefix'] .'tags';
+	$this->voltaire  = new Voltaire();
+	$this->voltaire->set_database("voltaire");
   }
 
   function isNotSystemTag($var) {
     return !(utf8_substr($var, 0, 7) == 'system:');
   }
 
-    function attachTags($bookmarkid, $tags, $fromApi = false, $extension = NULL, $replace = true, $fromImport = false) {
-        // Make sure that categories is an array of trimmed strings, and that if the categories are
-        // coming in from an API call to add a bookmark, that underscores are converted into strings.
-        if (!is_array($tags)) {
-            $tags = trim($tags);
-            if ($tags != '') {
-                if (substr($tags, -1) == ',') {
-                    $tags = substr($tags, 0, -1);
-                }
-                if ($fromApi) {
-                    $tags = explode(' ', $tags);
-                } else {
-                    $tags = explode(',', $tags);
-                }
-            } else {
-                $tags = null;
-            }
-        }
-
-        $tags_count = count($tags);
-        for ($i = 0; $i < $tags_count; $i++) {
-            $tags[$i] = trim(strtolower($tags[$i]));
-            if ($fromApi) {
-                include_once dirname(__FILE__) .'/../functions.inc.php';
-                $tags[$i] = convertTag($tags[$i], 'in');
-            }
-        }
-
-        if ($tags_count > 0) {
-            // Remove system tags
-            $tags = array_filter($tags, array($this, "isNotSystemTag"));
-
-            // Eliminate any duplicate categories
-            $temp = array_unique($tags);
-            $tags = array_values($temp);
-        } else {
-            // Unfiled
-            $tags[] = 'system:unfiled';
-        }
-
-        // Media and file types
-        if (!is_null($extension)) {
-            include_once dirname(__FILE__) .'/../functions.inc.php';
-            if ($keys = multi_array_search($extension, $GLOBALS['filetypes'])) {
-                $tags[] = 'system:filetype:'. $extension;
-                $tags[] = 'system:media:'. array_shift($keys);
-            }
-        }
-
-        // Imported
-        if ($fromImport) {
-            $tags[] = 'system:imported';
-        }
-
-        $this->db->sql_transaction('begin');
-
-        if ($replace) {
-            if (!$this->deleteTagsForBookmark($bookmarkid)){
-                $this->db->sql_transaction('rollback');
-                message_die(GENERAL_ERROR, 'Could not attach tags (deleting old ones failed)', '', __LINE__, __FILE__, $sql, $this->db);
-                return false;
-            }
-        }
-
-        // Add the categories to the DB.
-        for ($i = 0; $i < count($tags); $i++) {
-            if ($tags[$i] != '') {
-                $values = array(
-                    'bId' => intval($bookmarkid),
-                    'tag' => $tags[$i]
-                );
-
-                if (!$this->hasTag($bookmarkid, $tags[$i])) {
-                    $sql = 'INSERT INTO '. $this->getTableName() .' '. $this->db->sql_build_array('INSERT', $values);
-                    if (!($dbresult =& $this->db->sql_query($sql))) {
-                        $this->db->sql_transaction('rollback');
-                        message_die(GENERAL_ERROR, 'Could not attach tags', '', __LINE__, __FILE__, $sql, $this->db);
-                        return false;
-                    }
-                }
-            }
-        }
-        $this->db->sql_transaction('commit');
-        return true;    
-    } 
+  
     
-    function deleteTag($tag) {
-        $userservice =& ServiceFactory::getServiceInstance('UserService');
-        $logged_on_user = $userservice->getCurrentUserId();
-
-        $query = 'DELETE FROM '. $this->getTableName() .' USING '. $GLOBALS['tableprefix'] .'tags, '. $GLOBALS['tableprefix'] .'bookmarks WHERE '. $GLOBALS['tableprefix'] .'tags.bId = '. $GLOBALS['tableprefix'] .'bookmarks.bId AND '. $GLOBALS['tableprefix'] .'bookmarks.uId = '. $logged_on_user .' AND '. $GLOBALS['tableprefix'] .'tags.tag = "'. $this->db->sql_escape($tag) .'"';
-
-        if (!($dbresult =& $this->db->sql_query($query))) {
-            message_die(GENERAL_ERROR, 'Could not delete tags', '', __LINE__, __FILE__, $query, $this->db);
-            return false;
-        }
-
-        return true;
-    }
     
-    function deleteTagsForBookmark($bookmarkid) {
-        if (!is_int($bookmarkid)) {
-            message_die(GENERAL_ERROR, 'Could not delete tags (invalid bookmarkid)', '', __LINE__, __FILE__, $query);
-            return false;
-        }
-
-        $query = 'DELETE FROM '. $this->getTableName() .' WHERE bId = '. intval($bookmarkid);
-
-        if (!($dbresult =& $this->db->sql_query($query))) {
-            message_die(GENERAL_ERROR, 'Could not delete tags', '', __LINE__, __FILE__, $query, $this->db);
-            return false;
-        }
-
-        return true;
-    }
-
-    function &getTagsForBookmark($bookmarkid) {
-        if (!is_int($bookmarkid)) {
-            message_die(GENERAL_ERROR, 'Could not get tags (invalid bookmarkid)', '', __LINE__, __FILE__, $query);
-            return false;
-        }
-
-        $query = 'SELECT tag FROM '. $this->getTableName() .' WHERE bId = '. intval($bookmarkid) .' AND LEFT(tag, 7) <> "system:" ORDER BY tag';
-
-        if (!($dbresult =& $this->db->sql_query($query))) {
-            message_die(GENERAL_ERROR, 'Could not get tags', '', __LINE__, __FILE__, $query, $this->db);
-            return false;
-        }
-
-        $tags = array();
-        while ($row =& $this->db->sql_fetchrow($dbresult)) {
-            $tags[] = $row['tag'];
-        }
-
-        return $tags;
-    }
 
     function &getTags($userid = NULL) {
         $userservice =& ServiceFactory::getServiceInstance('UserService');

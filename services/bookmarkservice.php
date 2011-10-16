@@ -41,6 +41,7 @@ class BookmarkService {
   function & getBookmark($bid, $include_tags = false) {
       
 	  $bookmark = $this->voltaire->doc($bid);
+	  //print_r($bookmark);
 	  return (array)$bookmark;  
   }
 
@@ -58,7 +59,7 @@ class BookmarkService {
 
   function editAllowed($bookmark) {
      
-
+	
       if (!is_array($bookmark))
           if (!($bookmark = $this->getBookmark($bookmark)))
               return false;
@@ -160,7 +161,7 @@ class BookmarkService {
       // Set up the SQL update statement and execute it.
       $updates = array('bModified' => $moddatetime, 'bTitle' => $title, 'bAddress' => $address, 'bDescription' => $description, 'bStatus' => $status, 'bHash' => md5($address));
       $values_with_tags = $updates;
-	  $values_with_tags['categories'] = explode(" ",$categories);
+	  $values_with_tags['categories'] = explode(",",$categories);
 	  
 	  $doc = $this->voltaire->doc($bId); 
 	  $values_with_tags["_rev"] = $doc->_rev; 
@@ -169,11 +170,11 @@ class BookmarkService {
 	  
       if($result_doc->ok)
 	  {
-	  	return $result_doc->id; 
+	  	return $result_doc->_id; 
 	  }
       return false;
       
-      return true;
+      
   }
 
 /*** THIS IS ONE FUNCTION RESPONSIBLE FOR FETCHING ALL KIND OF BOOKMARKS ***/
