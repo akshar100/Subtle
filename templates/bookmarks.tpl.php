@@ -80,7 +80,11 @@ if (count($bookmarks) > 0) {
             $currentUser = $userservice->getCurrentUser();
             $currentUsername = $currentUser[$userservice->getFieldName('username')];
             $copy .= ' - <a href="'. createURL('bookmarks', $currentUsername .'?action=add&amp;address='. urlencode($row['bAddress']) .'&amp;title='. urlencode($row['bTitle'])) .'">'. T_('Copy') .'</a>';   
-        }
+        	if($row['isTopic'])
+			{
+				$copy .= ' - <a class="topic-a" href="'. createURL('bookmarks', $currentUsername .'?action=add&amp;address='. urlencode($row['bAddress']) .'&amp;title='. urlencode($row['bTitle'])) .'">'. T_('Subscribe Topic') .'</a>';
+			}
+		}
 
         // Nofollow option
         $rel = '';

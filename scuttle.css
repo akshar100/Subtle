@@ -446,3 +446,10 @@ ul {
   margin-right: 1em;
   width: 75%;
 }
+.topic-a
+{
+	background-color:#eaeaea;
+	border:1px solid #b6b6b6; 
+	padding:5px;
+	color:#6a6a6a;
+}
